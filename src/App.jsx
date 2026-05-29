@@ -9,6 +9,7 @@ import Wellbeing from './modules/Wellbeing';
 import Health from './modules/Health';
 import AICoach from './modules/AICoach';
 import Settings from './modules/Settings';
+import Marketplace from './modules/Marketplace';
 
 // Error Boundary to catch render crashes and print diagnostic reports directly on screen
 class ErrorBoundary extends React.Component {
@@ -116,6 +117,8 @@ const AppContent = () => {
         return <AICoach />;
       case 'settings':
         return <Settings />;
+      case 'marketplace':
+        return <Marketplace />;
       default:
         return <Dashboard />;
     }
