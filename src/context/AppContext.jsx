@@ -180,6 +180,18 @@ export const AppProvider = ({ children }) => {
     safeLoad('lm_healthLogs', INITIAL_HEALTH_LOGS, Array.isArray)
   );
 
+  const [reframeHistory, setReframeHistory] = useState(() =>
+    safeLoad('lm_reframeHistory', [], Array.isArray)
+  );
+
+  const [communityContributions, setCommunityContributions] = useState(() =>
+    safeLoad('lm_communityContributions', [
+      { id: 'c1', user: 'Sarah K.', avatar: 'SK', message: 'Completed 7-day meditation streak! 🧘', likes: 14, time: '2h ago', color: '#8B5CF6' },
+      { id: 'c2', user: 'Alex M.', avatar: 'AM', message: 'Hit my savings goal this month! 💰', likes: 9, time: '5h ago', color: '#10B981' },
+      { id: 'c3', user: 'Marcus L.', avatar: 'ML', message: 'Morning runs for 14 days straight 🏃', likes: 22, time: '1d ago', color: '#F59E0B' }
+    ], Array.isArray)
+  );
+
   const [tasks, setTasks] = useState(() => 
     safeLoad('lm_tasks', INITIAL_TASKS, Array.isArray)
   );
@@ -288,6 +300,8 @@ export const AppProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('lm_simulationSettings', JSON.stringify(simulationSettings)); }, [simulationSettings]);
   useEffect(() => { localStorage.setItem('lm_isReviewAdopted', isReviewAdopted); }, [isReviewAdopted]);
   useEffect(() => { localStorage.setItem('lm_auditLogs', JSON.stringify(auditLogs)); }, [auditLogs]);
+  useEffect(() => { localStorage.setItem('lm_reframeHistory', JSON.stringify(reframeHistory)); }, [reframeHistory]);
+  useEffect(() => { localStorage.setItem('lm_communityContributions', JSON.stringify(communityContributions)); }, [communityContributions]);
 
   // Current Date Helper
   const getTodayString = () => {
@@ -516,6 +530,17 @@ export const AppProvider = ({ children }) => {
       operator: 'Active User'
     };
     setAuditLogs(prev => [newLog, ...(Array.isArray(prev) ? prev : [])]);
+  };
+
+  const addReframeSession = (stressor, category, reframe) => {
+    const newSession = {
+      id: 'rf-' + Date.now(),
+      stressor,
+      category,
+      reframe,
+      date: getTodayString()
+    };
+    setReframeHistory(prev => [newSession, ...(Array.isArray(prev) ? prev : [])].slice(0, 20));
   };
 
   const adoptWeeklyActionPlan = (taskTitle) => {
@@ -786,9 +811,14 @@ export const AppProvider = ({ children }) => {
       logWorkout,
       deleteWorkout,
       updateWheelScore,
+      activeConnectedFixes: [],
 
       // Phase 3 Actions
       addAuditLog,
+      reframeHistory,
+      addReframeSession,
+      communityContributions,
+      setCommunityContributions,
       
       // Scores
       getFinanceScore,

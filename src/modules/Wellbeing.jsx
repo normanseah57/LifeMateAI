@@ -33,10 +33,18 @@ const Wellbeing = () => {
     setActiveTab,
     addAuditLog,
     addNotification,
-    t
+    t,
+    activeConnectedFixes,
+    reframeHistory,
+    addReframeSession,
+    transactions,
+    healthLogs,
+    profile,
+    communityContributions,
+    setCommunityContributions
   } = useApp();
   
-  const [activeSection, setActiveSection] = useState('mood'); // mood, breathe, meditate, balance
+  const [activeSection, setActiveSection] = useState('mood'); // mood, breathe, meditate, balance, correlations, community
   
   // Log Mood Form states
   const [moodVal, setMoodVal] = useState(7);
@@ -59,6 +67,16 @@ const Wellbeing = () => {
   // Self-Care Crisis Help states
   const [showCrisisCenter, setShowCrisisCenter] = useState(false);
   const [crisisCountry, setCrisisCountry] = useState('US');
+  const [showDecompressionModal, setShowDecompressionModal] = useState(false);
+
+  // Cognitive Reframing Lounge states
+  const [stressorInput, setStressorInput] = useState('');
+  const [reframeCategory, setReframeCategory] = useState('general');
+  const [isReframing, setIsReframing] = useState(false);
+
+  // Community states
+  const [newPost, setNewPost] = useState('');
+  const [showPostSuccess, setShowPostSuccess] = useState(false);
 
   // Breathing Cycle loop
   useEffect(() => {
@@ -130,6 +148,9 @@ const Wellbeing = () => {
     setNotesVal('');
     setShowLogSuccess(true);
     setTimeout(() => setShowLogSuccess(false), 3000);
+    if ((activeConnectedFixes || []).includes('decompression_trigger') && parseInt(stressVal) > 7) {
+      setTimeout(() => { setShowDecompressionModal(true); }, 500);
+    }
   };
 
   const handlePlayToggle = () => {
@@ -252,6 +273,12 @@ const Wellbeing = () => {
           className={`finance-tab-pill ${activeSection === 'correlations' ? 'active' : ''}`}
         >
           Correlations
+        </button>
+        <button 
+          onClick={() => setActiveSection('community')} 
+          className={`finance-tab-pill ${activeSection === 'community' ? 'active' : ''}`}
+        >
+          Community
         </button>
       </div>
 
@@ -730,6 +757,227 @@ const Wellbeing = () => {
                 }
               })()}
             </span>
+          </div>
+        </div>
+      )}
+      {/* CORRELATIONS TAB */}
+      {activeSection === 'correlations' && (() => {
+        const recentMood = [...(moodLogs || [])].reverse().slice(-7);
+        const recentHealth = [...(healthLogs || [])].reverse().slice(-7);
+        const sleepStressPoints = recentMood.map(ml => {
+          const hl = recentHealth.find(h => h.date === ml.date);
+          return hl ? { sleep: hl.sleepHours || 7, stress: ml.stressScore } : null;
+        }).filter(Boolean);
+        const avgSleep = sleepStressPoints.length > 0 ? (sleepStressPoints.reduce((s, p) => s + p.sleep, 0) / sleepStressPoints.length).toFixed(1) : '7.0';
+        const avgStress = recentMood.length > 0 ? (recentMood.reduce((s, m) => s + m.stressScore, 0) / recentMood.length).toFixed(1) : '5.0';
+        const sleepStressInfo = parseFloat(avgSleep) >= 7 ? { text: 'Positive Correlation', color: '#10B981' } : { text: 'Sleep Deficit Detected', color: '#F59E0B' };
+        const recentTx = (Array.isArray(transactions) ? transactions : []).filter(t => t.type === 'expense').slice(-7);
+        const avgSpend = recentTx.length > 0 ? (recentTx.reduce((s, t) => s + (t.amount || 0), 0) / recentTx.length).toFixed(0) : '0';
+        const avgMood = recentMood.length > 0 ? (recentMood.reduce((s, m) => s + m.moodScore, 0) / recentMood.length).toFixed(1) : '7.0';
+        const spendMoodInfo = parseFloat(avgSpend) < 50 ? { text: 'Mood Stable', color: '#10B981' } : { text: 'High Spend Period', color: '#EC4899' };
+
+        return (
+          <div className="breathe-section-wrapper fade-in">
+            <div className="breath-instruction">
+              <h3>📊 Wellbeing Correlations</h3>
+              <p>Cross-data analytics linking your sleep, spending, and mood patterns over the last 7 days.</p>
+            </div>
+
+            <div className="settings-card" style={{ padding: '14px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800' }}>😴 Sleep vs. Stress Level</h4>
+                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.04)', color: sleepStressInfo.color, border: `1px solid ${sleepStressInfo.color}40` }}>{sleepStressInfo.text}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+                <div style={{ flex: 1, background: 'rgba(139,92,246,0.08)', borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#8B5CF6', display: 'block' }}>{avgSleep}h</span>
+                  <span style={{ fontSize: '10px', color: '#64748B' }}>Avg Sleep</span>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(236,72,153,0.08)', borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#EC4899', display: 'block' }}>{avgStress}/10</span>
+                  <span style={{ fontSize: '10px', color: '#64748B' }}>Avg Stress</span>
+                </div>
+              </div>
+              <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>
+                {parseFloat(avgSleep) >= 7 ? '✅ Good sleep is helping keep your stress in check.' : '⚠️ Low sleep may be elevating your stress. Try the Deep Sleep Therapy meditation.'}
+              </p>
+            </div>
+
+            <div className="settings-card" style={{ padding: '14px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800' }}>💰 Daily Spending vs. Mood</h4>
+                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.04)', color: spendMoodInfo.color, border: `1px solid ${spendMoodInfo.color}40` }}>{spendMoodInfo.text}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+                <div style={{ flex: 1, background: 'rgba(16,185,129,0.08)', borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#10B981', display: 'block' }}>${avgSpend}</span>
+                  <span style={{ fontSize: '10px', color: '#64748B' }}>Avg Daily Spend</span>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(139,92,246,0.08)', borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#8B5CF6', display: 'block' }}>{avgMood}/10</span>
+                  <span style={{ fontSize: '10px', color: '#64748B' }}>Avg Mood</span>
+                </div>
+              </div>
+              <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>
+                {parseFloat(avgSpend) < 50 ? '✅ Controlled spending is positively supporting your mood stability.' : '⚠️ High spend periods may be impacting your mood. Review your Finance tab.'}
+              </p>
+            </div>
+
+            <div className="settings-card" style={{ padding: '16px' }}>
+              <span className="welcome-tag" style={{ color: '#C084FC', fontWeight: '800', fontSize: '9px', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>AI Cognitive Reframing Lounge</span>
+              <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '800' }}>🧠 Reframe a Stressor</h4>
+              <p style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '12px' }}>
+                Describe what's stressing you. Your AI coach will reframe it based on your coaching style ({profile?.coachingStyle || 'Gentle'}).
+              </p>
+              <select value={reframeCategory} onChange={(e) => setReframeCategory(e.target.value)} style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(15,23,42,0.4)', border: '1.5px solid rgba(255,255,255,0.05)', borderRadius: '12px', color: '#FFF', fontSize: '12.5px', outline: 'none', marginBottom: '8px' }}>
+                <option value="general">🌀 General Anxiety</option>
+                <option value="finance">💰 Financial Stress</option>
+                <option value="health">❤️ Health & Sleep</option>
+                <option value="career">💼 Work & Career</option>
+                <option value="social">👥 Social & Relationships</option>
+              </select>
+              <textarea
+                value={stressorInput}
+                onChange={(e) => setStressorInput(e.target.value)}
+                placeholder="e.g. Worried about credit card limits, feeling behind at work..."
+                style={{ width: '100%', height: '70px', padding: '10px', backgroundColor: 'rgba(15,23,42,0.4)', border: '1.5px solid rgba(255,255,255,0.05)', borderRadius: '12px', color: '#FFF', fontSize: '12.5px', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+              />
+              <button
+                onClick={() => generateCognitiveReframeLocal(stressorInput, reframeCategory)}
+                disabled={isReframing || !stressorInput.trim()}
+                style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '12px', border: 'none', background: isReframing ? 'rgba(139,92,246,0.3)' : 'linear-gradient(135deg, #8B5CF6, #6366F1)', color: 'white', fontWeight: '700', cursor: isReframing ? 'not-allowed' : 'pointer', fontSize: '13px' }}
+              >
+                {isReframing ? '🧠 Reframing...' : '✨ Generate Reframe'}
+              </button>
+              {(reframeHistory || []).length > 0 && (
+                <div style={{ marginTop: '16px' }}>
+                  <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Recent Reframes</h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(reframeHistory || []).slice(0, 3).map(session => (
+                      <div key={session.id} style={{ background: 'rgba(139,92,246,0.06)', borderRadius: '12px', padding: '10px', border: '1px solid rgba(139,92,246,0.15)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#C084FC', textTransform: 'uppercase' }}>{session.category}</span>
+                          <span style={{ fontSize: '10px', color: '#64748B' }}>{session.date}</span>
+                        </div>
+                        <p style={{ fontSize: '11px', color: '#94A3B8', margin: '0 0 4px 0', fontStyle: 'italic' }}>"{session.stressor}"</p>
+                        <p style={{ fontSize: '11.5px', color: '#E2E8F0', margin: 0, lineHeight: '1.5' }}>{session.reframe}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* COMMUNITY TAB */}
+      {activeSection === 'community' && (
+        <div className="breathe-section-wrapper fade-in">
+          <div className="breath-instruction">
+            <h3>🌐 Social Wellness Community</h3>
+            <p>Share wins, cheer teammates, and build accountability with your wellness circle.</p>
+          </div>
+
+          <div className="settings-card" style={{ padding: '14px', marginBottom: '12px' }}>
+            <span className="welcome-tag" style={{ color: '#F59E0B', fontWeight: '800', fontSize: '9px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🏆 Weekly Wellness Leaderboard</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { rank: 1, name: 'Marcus L.', avatar: 'ML', score: 94, streak: 14, color: '#F59E0B' },
+                { rank: 2, name: 'Sarah K.', avatar: 'SK', score: 88, streak: 7, color: '#8B5CF6' },
+                { rank: 3, name: 'You', avatar: '🌟', score: 81, streak: 3, color: '#10B981' },
+                { rank: 4, name: 'Alex M.', avatar: 'AM', score: 76, streak: 5, color: '#38BDF8' },
+              ].map(entry => (
+                <div key={entry.rank} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '12px', background: entry.name === 'You' ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${entry.name === 'You' ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.04)'}` }}>
+                  <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>
+                    {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                  </span>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: `${entry.color}20`, border: `2px solid ${entry.color}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: entry.avatar.length > 2 ? '16px' : '11px', fontWeight: '800', color: entry.color }}>
+                    {entry.avatar}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', display: 'block', color: entry.name === 'You' ? '#10B981' : '#FFF' }}>{entry.name}</span>
+                    <span style={{ fontSize: '10px', color: '#64748B' }}>🔥 {entry.streak} day streak</span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: entry.color, display: 'block' }}>{entry.score}</span>
+                    <span style={{ fontSize: '9px', color: '#64748B' }}>pts</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-card" style={{ padding: '14px', marginBottom: '12px' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800' }}>💬 Community Wins</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {(communityContributions || []).map(post => (
+                <div key={post.id} style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: `${post.color}20`, border: `2px solid ${post.color}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: post.color }}>
+                      {post.avatar}
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '12px', fontWeight: '700', display: 'block' }}>{post.user}</span>
+                      <span style={{ fontSize: '10px', color: '#64748B' }}>{post.time}</span>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#E2E8F0', margin: '0 0 8px 0', lineHeight: '1.5' }}>{post.message}</p>
+                  <button
+                    onClick={() => setCommunityContributions(prev => prev.map(p => p.id === post.id ? { ...p, likes: p.likes + 1 } : p))}
+                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '3px 10px', color: '#94A3B8', fontSize: '11px', cursor: 'pointer' }}
+                  >
+                    👏 {post.likes}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-card" style={{ padding: '14px' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '800' }}>🎉 Share Your Win</h4>
+            <textarea
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
+              placeholder="Share a wellness win with your community..."
+              style={{ width: '100%', height: '60px', padding: '10px', backgroundColor: 'rgba(15,23,42,0.4)', border: '1.5px solid rgba(255,255,255,0.05)', borderRadius: '12px', color: '#FFF', fontSize: '12.5px', outline: 'none', resize: 'none', boxSizing: 'border-box', marginBottom: '8px' }}
+            />
+            <button
+              onClick={() => {
+                if (!newPost.trim()) return;
+                const post = { id: 'post-' + Date.now(), user: profile?.name || 'You', avatar: (profile?.name || 'Y')[0].toUpperCase(), message: newPost.trim(), likes: 0, time: 'Just now', color: '#10B981' };
+                setCommunityContributions(prev => [post, ...(Array.isArray(prev) ? prev : [])]);
+                setNewPost('');
+                setShowPostSuccess(true);
+                setTimeout(() => setShowPostSuccess(false), 3000);
+                addAuditLog('Community Post', `Shared: "${post.message.substring(0, 40)}"`);
+              }}
+              style={{ width: '100%', padding: '11px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
+            >
+              📣 Post to Community
+            </button>
+            {showPostSuccess && (
+              <div className="success-banner fade-in" style={{ marginTop: '8px' }}>
+                <span>🎉 Win shared with your community!</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DECOMPRESSION MODAL */}
+      {showDecompressionModal && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(9,13,22,0.95)', zIndex: 120, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} className="fade-in">
+          <div style={{ background: '#131B2E', border: '1.5px solid rgba(139,92,246,0.4)', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧘</div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800' }}>High Stress Detected</h3>
+            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 16px 0', lineHeight: '1.5' }}>Your stress level is elevated. Take a moment to decompress with a breathing session.</p>
+            <button onClick={() => { setShowDecompressionModal(false); setActiveSection('breathe'); }} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', color: 'white', fontWeight: '700', cursor: 'pointer', fontSize: '13px', marginBottom: '8px' }}>
+              Start Breathing Exercise
+            </button>
+            <button onClick={() => setShowDecompressionModal(false)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: '#2D3748', color: '#E2E8F0', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+              Dismiss
+            </button>
           </div>
         </div>
       )}
