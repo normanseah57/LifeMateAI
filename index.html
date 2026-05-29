@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" fill="#8B5CF6" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LifeMate AI - Your Personal Life Operating System</title>
+    <meta name="description" content="LifeMate AI connects your finances, stress logs, habits, sleep data, and schedule into a single, unified Life Score dashboard. Manage your daily rhythm with an empathetic, data-driven AI coach." />
+    
+    <!-- Self-healing script to clear rogue Service Workers from previous projects on port 5173 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          if (registrations.length > 0) {
+            for (let registration of registrations) {
+              registration.unregister().then(function(boolean) {
+                console.log('Stale ServiceWorker unregistered:', boolean);
+              });
+            }
+            // Clear caches associated with the old ServiceWorker
+            if ('caches' in window) {
+              caches.keys().then(function(names) {
+                for (let name of names) caches.delete(name);
+              });
+            }
+            // Reload the page once to pull the fresh network bundle without interceptors
+            setTimeout(function() {
+              window.location.reload(true);
+            }, 600);
+          }
+        }).catch(function(err) {
+          console.error('Service worker retrieval failed:', err);
+        });
+      }
+    </script>
+
+    <!-- Global popup error boundary catch to debug local runtime load errors -->
+    <script>
+      window.addEventListener('error', function(e) {
+        const errorDetails = 'Global Error Caught:\n' + 
+          e.message + '\n\n' +
+          'File: ' + e.filename + '\n' +
+          'Line: ' + e.lineno + ' : Col: ' + e.colno + '\n\n' +
+          'Stack Trace:\n' + (e.error ? e.error.stack : 'N/A');
+        
+        // Render a visual modal block in case alerts are blocked
+        setTimeout(function() {
+          const diagnosticDiv = document.createElement('div');
+          diagnosticDiv.style.position = 'fixed';
+          diagnosticDiv.style.top = '10px';
+          diagnosticDiv.style.left = '10px';
+          diagnosticDiv.style.right = '10px';
+          diagnosticDiv.style.background = '#7F1D1D';
+          diagnosticDiv.style.color = '#FEE2E2';
+          diagnosticDiv.style.padding = '20px';
+          diagnosticDiv.style.borderRadius = '12px';
+          diagnosticDiv.style.border = '2px solid #EF4444';
+          diagnosticDiv.style.fontFamily = 'monospace';
+          diagnosticDiv.style.fontSize = '12px';
+          diagnosticDiv.style.whiteSpace = 'pre-wrap';
+          diagnosticDiv.style.zIndex = '999999';
+          diagnosticDiv.style.overflowY = 'auto';
+          diagnosticDiv.style.maxHeight = '90vh';
+          diagnosticDiv.innerText = errorDetails;
+          document.body.appendChild(diagnosticDiv);
+        }, 500);
+
+        alert(errorDetails);
+      });
+
+      window.addEventListener('unhandledrejection', function(e) {
+        alert('Unhandled Rejection Caught:\n' + e.reason);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
